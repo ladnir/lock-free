@@ -7,7 +7,7 @@
  *      Bounded single producer single consumer
  *      non-blocking lock free queue.
  *
- *      g++ --std=c++11 -lpthread ...
+ *      g++ --std=c++11 ...
  */
 #include <stdlib.h>
 

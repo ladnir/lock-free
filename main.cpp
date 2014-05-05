@@ -10,10 +10,12 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "lf_queue_spsc.hpp"
+//#include "lf_queue_spsc.hpp"
+#include "l_queue_mpmc.hpp"
 
-#define COUNT 100000000
-typedef struct lf_queue_spsc_t QUEUE_TYPE;
+#define COUNT 10000000
+//typedef struct lf_queue_spsc_t QUEUE_TYPE;
+typedef struct l_queue_mpmc_t QUEUE_TYPE;
 
 void * func_prod(void *arg){
 	QUEUE_TYPE* queue = (QUEUE_TYPE*) arg;
