@@ -41,10 +41,10 @@ int _push(struct lf_queue_mpsc_t * queue, void * entry){
 	int r =0;
 restart:
 
-	int tail = queue->tail.load(memory_order_acquire);
-	int old_head = queue->head.load(memory_order_relaxed);
+	int tail = queue->tail.load(memory_order_seq_cst);
+	int old_head = queue->head.load(memory_order_seq_cst);
 
-	if( tail <= (old_head+1) - queue->cap )return 0;
+	if( tail == (old_head+1) - queue->cap )return 0;
 
 	// try and reserve head for our selves
 	if(! atomic_compare_exchange_weak(&queue->head, &old_head, old_head+1 ) ){
