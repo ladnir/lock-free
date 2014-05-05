@@ -2,7 +2,12 @@
  * queue_spsc.h
  *
  *  Created on: May 4, 2014
- *      Author: rindalp
+ *      Author: Peter Rindal
+ *
+ *      Bounded single producer single consumer
+ *      non-blocking lock free queue.
+ *
+ *      g++ --std=c++11 -lpthread ...
  */
 #include <stdlib.h>
 
