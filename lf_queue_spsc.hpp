@@ -35,7 +35,7 @@ int _push(struct lf_queue_spsc_t * queue, void * entry){
 	int tail = queue->tail.load(memory_order_relaxed);
 	int head = queue->head.load(memory_order_relaxed);
 
-	if( tail== (head + 1) % queue->cap )return 0;
+	if( tail== (head + 1) - queue->cap )return 0;
 
 	queue->list[head] = entry; //Store
 	atomic_thread_fence(memory_order_release); //StoreStore
@@ -59,7 +59,7 @@ void * _pop(struct lf_queue_spsc_t * queue){
 
 void init_lf_queue_spsc(struct lf_queue_spsc_t * queue, int capacity){
 
-	queue->list = (void **) malloc(sizeof (void*) * capacity+1);
+	queue->list = (void **) malloc(sizeof (void*) * (capacity+1));
 	queue->cap = capacity+1;
 	queue->head.store( 0, memory_order_relaxed);
 	queue->tail.store( 0, memory_order_relaxed);
