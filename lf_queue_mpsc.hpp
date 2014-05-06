@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <atomic>
 #include <thread>
+#include <cassert>
 
 #define EMPTY 0
 #define FULL 1
@@ -22,67 +23,76 @@
 
 using namespace std;
 
-struct lf_queue_mpsc_t{
+struct pointer_guard{
 
-	atomic<int> * flags;
-	void ** list;
-	int cap;
-
-	atomic<int> tail; 	// ints are normally atomic...
-	atomic<int> head; // temp head for producers.
-
-	int (*push)(struct lf_queue_mpsc_t *, void *);
-	void *(*pop)(struct lf_queue_mpsc_t *);
+	void* ptr;
+	atomic<unsigned int> guard;
 };
 
-int _push(struct lf_queue_mpsc_t * queue, void * entry){
-	//sleep(1);
-	//printf("push\n");
-	int r =0;
-restart:
+struct lf_queue_mpsc_t{
 
-	int tail = queue->tail.load(memory_order_seq_cst);
-	int old_head = queue->head.load(memory_order_seq_cst);
+	struct pointer_guard* list;
+	unsigned int cap;
 
-	if( tail == (old_head+1) - queue->cap )return 0;
+	atomic<unsigned int> tail;
+	atomic<unsigned int> head;
+
+	int (*push)(struct lf_queue_mpsc_t *, void* );
+	int (*pop )(struct lf_queue_mpsc_t *, void**);
+};
+
+int _push(struct lf_queue_mpsc_t * queue, void* entry){
+
+	unsigned int tail, old_head;
+
+	do{
+		tail = queue->tail.load(memory_order_relaxed);
+		old_head = queue->head.load(memory_order_relaxed);
+		if( tail + queue->cap -1 <= old_head )return 0;
 
 	// try and reserve head for our selves
-	if(! atomic_compare_exchange_weak(&queue->head, &old_head, old_head+1 ) ){
-		goto restart;
-	}
-
+	}while(! atomic_compare_exchange_weak_explicit(&queue->head,
+										  	  	   &old_head,
+										  	  	   old_head+1,
+										  	  	   memory_order_release,
+										  	  	   memory_order_acquire ));
 	// the index of old_head is ours!
-	queue->list[old_head%queue->cap] = entry;  //Store
-	atomic_thread_fence(memory_order_release); //StoreStore
-	queue->flags[old_head%queue->cap].store( FULL,memory_order_relaxed);  //Store
 
-	//printf("done\n");
+	struct pointer_guard * pg = &queue->list[old_head%queue->cap];
+	pg->ptr = entry;
+	pg->guard.store(1,memory_order_release);
 	return 1;
 }
 
-void * _pop(struct lf_queue_mpsc_t * queue){
-	//sleep(1);
-	//printf("pop\n");
+int _pop(struct lf_queue_mpsc_t * queue, void ** dest){
 
-	int tail = queue->tail.load(memory_order_relaxed);
-	int head = queue->head.load(memory_order_relaxed);
+	unsigned int tail = queue->tail.load(memory_order_relaxed);
+	unsigned int old_head = queue->head.load(memory_order_relaxed);
 
-	if(tail == head) return NULL;
+	if(tail != old_head) { // not empty.
 
-	while(queue->flags[tail%queue->cap].load(memory_order_relaxed) != FULL); // spin until write has completed
+		struct pointer_guard * pg = &queue->list[tail%queue->cap];
 
-	void * entry = queue->list[tail%queue->cap]; //Load
-	queue->flags[tail%queue->cap].store( EMPTY,memory_order_relaxed);       //Store
-	atomic_thread_fence(memory_order_release); // LoadStore , StoreStore
-	queue->tail.store( tail + 1 , memory_order_relaxed); //Store
+		if(pg->guard.load(memory_order_acquire)){ // data is ready
+			*dest = pg->ptr;
+			pg->guard.store(0,memory_order_relaxed); // could be relaxed?
+			queue->tail.store( tail + 1 , memory_order_release);
+			return 1; // success? haha
+		}
+		//printf("data not ready. tail %d , head %d , cap%d\n",tail,old_head,queue->cap);
+	}else{
+		//printf("empty. ");
+	}
 
-	return entry;
+	// A second ago it was empty or the data wasn't ready.
+	return 0;
 }
 
-void init_lf_queue_spsc(struct lf_queue_mpsc_t * queue, int capacity){
+void init_lf_queue_spsc(struct lf_queue_mpsc_t * queue, unsigned int capacity){
 
-	queue->flags = (atomic<int>*) malloc(sizeof(atomic<int>)* (capacity+1));
-	queue->list = (void **) malloc(sizeof (void*) * (capacity+1));
+	assert(capacity +1 != 0  && "capacity must be less Max unsigned int");
+
+	queue->list = (struct pointer_guard*) malloc(sizeof (struct pointer_guard) * (capacity+1));
 	queue->cap = capacity+1;
 	queue->tail.store( 0, memory_order_relaxed);
 	queue->head.store( 0, memory_order_relaxed);

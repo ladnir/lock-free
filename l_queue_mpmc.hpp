@@ -29,7 +29,7 @@ struct l_queue_mpmc_t{
 	sem_t mutex;
 
 	int (*push)(struct l_queue_mpmc_t *, void *);
-	void *(*pop)(struct l_queue_mpmc_t *);
+	int (*pop )(struct l_queue_mpmc_t *, void **);
 };
 
 int _push(struct l_queue_mpmc_t * queue, void * entry){
@@ -50,7 +50,7 @@ int _push(struct l_queue_mpmc_t * queue, void * entry){
 	return 1;
 }
 
-void * _pop(struct l_queue_mpmc_t * queue){
+int _pop(struct l_queue_mpmc_t * queue, void** dest){
 
 	sem_wait(&queue->mutex);
 	int tail = queue->tail;//.load(memory_order_relaxed);
@@ -58,14 +58,14 @@ void * _pop(struct l_queue_mpmc_t * queue){
 
 	if(tail == head){
 		sem_post(&queue->mutex);
-		return NULL;
+		return 0;
 	}
 
-	void * entry = queue->list[tail];
+	* dest = queue->list[tail];
 	queue->tail= (tail + 1 ) %queue->cap;//.store( , memory_order_relaxed);
 
 	sem_post(&queue->mutex);
-	return entry;
+	return 1;
 }
 
 void init_lf_queue_spsc(struct l_queue_mpmc_t * queue, int capacity){
