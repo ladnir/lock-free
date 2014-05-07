@@ -23,7 +23,8 @@ public:
 	Queue_lf_mpsc(unsigned int capacity){
 		assert(capacity +1 != 0  && "capacity must be less Max unsigned int");
 
-		list.reserve(capacity );
+		//list.reserve(capacity );
+		list = (Guarded_data<T>*)malloc(sizeof(Guarded_data<T>)*capacity);
 		cap = capacity;
 		tail.store(0, memory_order_release);
 		head.store(0, memory_order_release);
@@ -32,7 +33,7 @@ public:
 	int push(T );
 	int pop (T&);
 private:
-	vector<Guarded_data<T>> list;
+	Guarded_data<T>* list;
 	unsigned int cap;
 	atomic<unsigned int> tail;
 	atomic<unsigned int> head;
@@ -55,7 +56,7 @@ template <class T> int Queue_lf_mpsc<T>::push( T entry){
 										  	  	   memory_order_relaxed ));
 	// the index of lcl_head is ours!
 	// set the entry and then publish it to the world!
-	//list[lcl_head % cap].publish(entry);
+	list[lcl_head % cap].publish(entry);
 	return 1;
 }
 
@@ -66,11 +67,11 @@ template <class T> int Queue_lf_mpsc<T>::pop(T& dest){
 
 	if(lcl_tail != lcl_tail) {							// not empty.
 		Guarded_data<T>* gd = &list[lcl_tail % cap];
-		//if(gd->tryGet(std::ref(dest))){					// try and get the data
-		//	gd->rescind();								// mark the data as no longer valid
-		//	tail.store( lcl_tail + 1 , memory_order_release);
-		//	return 1;									// success? haha
-		//}
+		if(gd->tryGet(dest)){					// try and get the data
+			gd->rescind();								// mark the data as no longer valid
+			tail.store( lcl_tail + 1 , memory_order_release);
+			return 1;									// success? haha
+		}
 		//printf("data not ready. tail %d , head %d , cap%d\n",tail,old_head,queue->cap);
 	}
 

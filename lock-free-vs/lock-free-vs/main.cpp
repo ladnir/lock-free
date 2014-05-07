@@ -9,24 +9,21 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <atomic>
-#include <thread>
 using namespace std;
 
-
-#include "lf_queue_spsc.hpp"
-#include "l_queue_mpmc.hpp"
-#include "lf_queue_mpsc.hpp"
+#include "stdafx.h"
+#include "Guarded_data.h"
+#include "Queue_lf_mpsc.h"
 
 static const int COUNT = 10000000;
 static const int NUM_PROD = 6;
 //typedef struct lf_queue_spsc_t QUEUE_TYPE;
 //typedef struct l_queue_mpmc_t QUEUE_TYPE;
-typedef Lf_queue_mpsc<int*> QUEUE_TYPE;
+typedef Queue_lf_mpsc<int> QUEUE_TYPE;
 
 
 void * func_prod(void *arg){
-	QUEUE_TYPE* queue = (QUEUE_TYPE*) arg;
+	//QUEUE_TYPE* queue = (QUEUE_TYPE*) arg;
 
 	int i;
 	unsigned long long  *s = (unsigned long long*)malloc(sizeof(unsigned long long));
@@ -36,7 +33,7 @@ void * func_prod(void *arg){
 
 		//int * ptr = (int*)malloc(sizeof(int*));
 		//*ptr = i;
-		while(! queue->push( ptr ));
+		//while(! queue->push( i ));
 
 		//*s += i;
 	}
@@ -46,20 +43,20 @@ void * func_prod(void *arg){
 }
 
 void * func_cons(void *arg){
-	QUEUE_TYPE* queue = (QUEUE_TYPE*) arg;
+	//QUEUE_TYPE* queue = (QUEUE_TYPE*) arg;
 
 	int i;
 	unsigned long long  *s = (unsigned long long*)malloc(sizeof(unsigned long long));
 	*s = 0;
 
 	for(i =0; i < COUNT *NUM_PROD;i++) {
-		int* ptr;
+		int ptr;
 
 		//sleep(1);
 		//printf("pop\n");
-		while(! queue->pop(&ptr)){
+		//while(! queue->pop(ptr)){
 			//printf("pop failed, %d, %d\n",i,COUNT);
-		}
+		//}
 
 		//*s += *ptr;
 		//free(ptr);
@@ -73,19 +70,21 @@ int main(int argc, char* argv[]){
 	unsigned int cap = 10000,i;
 	unsigned long long * p1, *c1,prod_sum=0, t;
 	struct timeval start,end;
-	QUEUE_TYPE queue;
+	QUEUE_TYPE queue(cap);
 	pthread_t prods[NUM_PROD];
 	pthread_t consumer;
 
+	Guarded_data<int> gd;
+
 	// INIT
 	//init_lf_queue_spsc(&queue, cap);
-	queue = new QUEUE_TYPE(cap);
+	//queue = new QUEUE_TYPE(cap);
 	gettimeofday(&start,NULL);
 
 	// CREATE THREADS
-	pthread_create(&consumer,0,&func_cons,&queue);
+	//pthread_create(&consumer,0,&func_cons,&queue);
 	for(i=0;i<NUM_PROD;i++){
-		pthread_create(&prods[i],0,&func_prod,&queue);
+		//pthread_create(&prods[i],0,&func_prod,&queue);
 	}
 
 	// JOIN THREADS
