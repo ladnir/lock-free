@@ -17,88 +17,94 @@
 #include <thread>
 #include <cassert>
 
-#define EMPTY 0
-#define FULL 1
-#define PARTIAL 2
 
 using namespace std;
 
-struct pointer_guard{
-
-	void* ptr;
-	atomic<unsigned int> guard;
+template <class T> class Guarded_data{
+public:
+		Guarded_data(){guard = 0;}
+	 	void inline publish(T data);
+	 	int inline tryGet(T* dest);
+	 	void inline rescind();
+private:
+		T data;
+		atomic<unsigned int> guard;
 };
 
-struct lf_queue_mpsc_t{
+template <class T> void inline Guarded_data<T>::publish(T entry){
+	data = entry;
+	guard.store(1,memory_order_release);
+}
+template <class T> int inline Guarded_data<T>::tryGet(T* dest){
 
-	struct pointer_guard* list;
+	if(guard.load(memory_order_acquire)){
+		*dest = data;
+		return 1;
+	}
+	return 0;
+}
+template <class T> void inline Guarded_data<T>::rescind(){
+	guard.store(0,memory_order_release);
+}
+
+template <class T> class Lf_queue_mpsc{
+public:
+	Lf_queue_mpsc(unsigned int capacity){
+		assert(capacity +1 != 0  && "capacity must be less Max unsigned int");
+
+		list = (Guarded_data*) malloc(sizeof (Guarded_data<T>) * (capacity+1));
+		cap = capacity+1;
+		tail.store( 0, memory_order_relaxed);
+		head.store( 0, memory_order_relaxed);
+	}
+
+	int push(T );
+	int pop (T*);
+private:
+	Guarded_data<T>* list;
 	unsigned int cap;
-
 	atomic<unsigned int> tail;
 	atomic<unsigned int> head;
-
-	int (*push)(struct lf_queue_mpsc_t *, void* );
-	int (*pop )(struct lf_queue_mpsc_t *, void**);
 };
 
-int _push(struct lf_queue_mpsc_t * queue, void* entry){
+template <class T> int Lf_queue_mpsc<T>::push( T entry){
 
-	unsigned int tail, old_head;
+	unsigned int lcl_tail, lcl_head;
 
 	do{
-		tail = queue->tail.load(memory_order_relaxed);
-		old_head = queue->head.load(memory_order_relaxed);
-		if( tail + queue->cap -1 <= old_head )return 0;
+		lcl_tail = this->tail.load(memory_order_relaxed);
+		lcl_head = this->head.load(memory_order_relaxed);
+		if( tail + cap -1 <= lcl_head )return 0;
 
 	// try and reserve head for our selves
-	}while(! atomic_compare_exchange_weak_explicit(&queue->head,
-										  	  	   &old_head,
-										  	  	   old_head+1,
+	}while(! atomic_compare_exchange_weak_explicit(&this->head,
+										  	  	   &lcl_head,
+										  	  	   lcl_head+1,
 										  	  	   memory_order_release,
-										  	  	   memory_order_acquire ));
-	// the index of old_head is ours!
-
-	struct pointer_guard * pg = &queue->list[old_head%queue->cap];
-	pg->ptr = entry;
-	pg->guard.store(1,memory_order_release);
+										  	  	   memory_order_relaxed ));
+	// the index of lcl_head is ours!
+	// set the entry and then publish it
+	list[lcl_head % cap].publish(entry);
 	return 1;
 }
 
-int _pop(struct lf_queue_mpsc_t * queue, void ** dest){
+template <class T> int Lf_queue_mpsc<T>::pop(T* dest){
 
-	unsigned int tail = queue->tail.load(memory_order_relaxed);
-	unsigned int old_head = queue->head.load(memory_order_relaxed);
+	unsigned int lcl_tail = tail.load(memory_order_relaxed);
+	unsigned int lcl_head = head.load(memory_order_relaxed);
 
-	if(tail != old_head) { // not empty.
-
-		struct pointer_guard * pg = &queue->list[tail%queue->cap];
-
-		if(pg->guard.load(memory_order_acquire)){ // data is ready
-			*dest = pg->ptr;
-			pg->guard.store(0,memory_order_relaxed); // could be relaxed?
-			queue->tail.store( tail + 1 , memory_order_release);
+	if(lcl_tail != lcl_tail) { // not empty.
+		Guarded_data<T>* gd = &list[lcl_tail % cap];
+		if(gd->tryGet(dest)){ // try and get the data
+			gd->rescind(); // mark the data as no longer valid
+			tail.store( lcl_tail + 1 , memory_order_release);
 			return 1; // success? haha
 		}
 		//printf("data not ready. tail %d , head %d , cap%d\n",tail,old_head,queue->cap);
-	}else{
-		//printf("empty. ");
 	}
 
 	// A second ago it was empty or the data wasn't ready.
 	return 0;
-}
-
-void init_lf_queue_spsc(struct lf_queue_mpsc_t * queue, unsigned int capacity){
-
-	assert(capacity +1 != 0  && "capacity must be less Max unsigned int");
-
-	queue->list = (struct pointer_guard*) malloc(sizeof (struct pointer_guard) * (capacity+1));
-	queue->cap = capacity+1;
-	queue->tail.store( 0, memory_order_relaxed);
-	queue->head.store( 0, memory_order_relaxed);
-
-	queue->pop = _pop;
-	queue->push = _push;
 }
 
 
