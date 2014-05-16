@@ -81,9 +81,11 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Guarded_data.h" />
+    <ClInclude Include="Guarded_data_tc.h" />
     <ClInclude Include="Queue_lf_spsc.h" />
-    <ClInclude Include="Queue_lf_mpsc.h" />
+    <ClInclude Include="Queue_lf_s_mpsc.h" />
+    <ClInclude Include="Queue_lf_tc_mpsc.h" />
+    <ClInclude Include="Queue_lf_ts_mpsc.h" />
     <ClInclude Include="Queue_l_mpmc.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />

@@ -24,16 +24,22 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Guarded_data.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Queue_l_mpmc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Queue_lf_mpsc.h">
+    <ClInclude Include="Queue_lf_spsc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Queue_lf_spsc.h">
+    <ClInclude Include="Queue_lf_tc_mpsc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Guarded_data_tc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue_lf_ts_mpsc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue_lf_s_mpsc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
