@@ -82,6 +82,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Guarded_data_tc.h" />
+    <ClInclude Include="Provider.h" />
+    <ClInclude Include="Queue_lf_spmc.h" />
     <ClInclude Include="Queue_lf_spsc.h" />
     <ClInclude Include="Queue_lf_s_mpsc.h" />
     <ClInclude Include="Queue_lf_tc_mpsc.h" />
@@ -94,8 +96,9 @@
     <ResourceCompile Include="app.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="lock-free-vs.cpp" />
+    <ClCompile Include="Provider.cpp" />
+    <ClCompile Include="Queue_lf_spmc.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

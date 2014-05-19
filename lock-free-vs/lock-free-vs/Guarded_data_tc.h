@@ -21,11 +21,32 @@ private:
 public:
 
 	Guarded_data_tc() {
+		guard.store(0, memory_order_release);
 	}
-	void inline publish(T data);
-	int inline tryGet(T& dest);
+	int inline tryPublish(T);
+	void inline publish(T);
+
+	void inline get(T&);
+	int inline tryGet(T&);
+
 	void inline rescind();
 };
+
+
+template<typename T> int inline Guarded_data_tc<T>::tryPublish(T entry){
+
+	if (!guard.load(memory_order_acquire)){
+		data = entry;
+		guard.store(1, memory_order_release);
+		return 1;
+	}
+	printf("try pub: %u", guard.load());
+	return 0;
+}
+
+template<typename T> void inline Guarded_data_tc<T>::get(T& dest){
+	dest = data;
+}
 
 
 template <class T> void inline Guarded_data_tc<T>::publish(T entry){
@@ -33,6 +54,7 @@ template <class T> void inline Guarded_data_tc<T>::publish(T entry){
 	data = entry;
 	guard.store(1, memory_order_release);
 }
+
 template <class T>int inline Guarded_data_tc<T>::tryGet(T& dest){
 //int inline Guarded_data_tc::tryGet(T& dest){
 

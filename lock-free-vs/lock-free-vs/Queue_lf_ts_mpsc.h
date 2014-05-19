@@ -18,7 +18,7 @@
 using namespace std;
 
 template<typename T>
-struct data_guard_tc{
+struct data_guard_ts{
 
 	T data;
 	atomic<unsigned int> guard;
@@ -27,53 +27,59 @@ struct data_guard_tc{
 template<typename T>
 struct queue_lf_ts_mpsc_t{
 
-	struct data_guard_tc<T>* list;
+	struct data_guard_ts<T>* list;
 	unsigned int cap;
 
 	atomic<unsigned int> tail;
 	atomic<unsigned int> head;
+	
+	void init(struct queue_lf_ts_mpsc_t<T> * queue, unsigned int capacity){
 
-	//int(*push)(struct queue_lf_s_mpsc_t *, void*);
-	//int(*pop)(struct queue_lf_s_mpsc_t *, void**);
+		assert(capacity + 1 != 0 && "capacity must be less Max unsigned int");
+
+		queue->list = (struct data_guard_ts<T>*) malloc(sizeof (struct data_guard_ts<T>) * (capacity + 1));
+		queue->cap = capacity + 1;
+		queue->tail.store(0, memory_order_relaxed);
+		queue->head.store(0, memory_order_relaxed);
+	}
 
 	template<typename T>
 	int push(struct queue_lf_ts_mpsc_t<T> * queue, T entry){
 
-		unsigned int tail, old_head;
+		unsigned int lcl_tail, lcl_head;
 
 		do{
-			tail = queue->tail.load(memory_order_relaxed);
-			old_head = queue->head.load(memory_order_relaxed);
-			//printf("push tail %d, head %d\n", tail, old_head);
-			if (tail + queue->cap - 1 <= old_head)return 0;
-
+			lcl_tail = queue->tail.load(memory_order_relaxed);
+			lcl_head = queue->head.load(memory_order_relaxed);
+			if (lcl_tail + queue->cap - 1 <= lcl_head)
+				return 0;
 			// try and reserve head for our selves
 		} while (!atomic_compare_exchange_weak_explicit(&queue->head,
-														&old_head,
-														old_head + 1,
+														&lcl_head,
+														lcl_head + 1,
 														memory_order_release,
-														memory_order_acquire));
+														memory_order_relaxed));
 		// the index of old_head is ours!
 
-		struct data_guard_tc<T> * pg = &queue->list[old_head%queue->cap];
-		pg->data = entry;
-		pg->guard.store(1, memory_order_release);
+		struct data_guard_ts<T> * dg = &queue->list[lcl_head%queue->cap];
+		dg->data = entry;
+		dg->guard.store(1, memory_order_release);
 		return 1;
 	}
 
 	template<typename T>
-	int pop(struct queue_lf_ts_mpsc_t<T> * queue, T* dest){
+	int pop(struct queue_lf_ts_mpsc_t<T> * queue, T& dest){
 
 		unsigned int lcl_tail = queue->tail.load(memory_order_relaxed);
 		unsigned int lcl_head = queue->head.load(memory_order_relaxed);
 	
 		if (lcl_tail != lcl_head) { // not empty.
 
-			struct data_guard_tc<T> * pg = &queue->list[lcl_tail%queue->cap];
+			struct data_guard_ts<T> * dg = &queue->list[lcl_tail%queue->cap];
 
-			if (pg->guard.load(memory_order_acquire)){ // data is ready
-				*dest = pg->data;
-				pg->guard.store(0, memory_order_relaxed); // could be relaxed?
+			if (dg->guard.load(memory_order_acquire)){ // data is ready
+				dest = dg->data;
+				dg->guard.store(0, memory_order_relaxed); // could be relaxed?
 				queue->tail.store(lcl_tail + 1, memory_order_release);
 				return 1; // success? haha
 			}
@@ -85,19 +91,6 @@ struct queue_lf_ts_mpsc_t{
 
 		// A second ago it was empty or the data wasn't ready.
 		return 0;
-	}
-
-	void init_queue_lf_s_mpsc(struct queue_lf_ts_mpsc_t<T> * queue, unsigned int capacity){
-
-		assert(capacity + 1 != 0 && "capacity must be less Max unsigned int");
-
-		queue->list = (struct data_guard_tc<T>*) malloc(sizeof (struct data_guard_tc<T>) * (capacity + 1));
-		queue->cap = capacity + 1;
-		queue->tail.store(0, memory_order_relaxed);
-		queue->head.store(0, memory_order_relaxed);
-
-		/*queue->pop = _pop;
-		queue->push = _push;*/
 	}
 
 };

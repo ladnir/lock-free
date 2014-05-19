@@ -13,15 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\deprecated">
+      <UniqueIdentifier>{99606086-45f1-4b52-b2f8-a30421847b44}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Queue_l_mpmc.h">
@@ -36,10 +36,19 @@
     <ClInclude Include="Guarded_data_tc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Queue_lf_ts_mpsc.h">
+    <ClInclude Include="Queue_lf_spmc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Queue_lf_s_mpsc.h">
+      <Filter>Header Files\deprecated</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue_lf_ts_mpsc.h">
+      <Filter>Header Files\deprecated</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Provider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -52,10 +61,13 @@
     <ClCompile Include="lock-free-vs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AssemblyInfo.cpp">
+    <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="Queue_lf_spmc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Provider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
