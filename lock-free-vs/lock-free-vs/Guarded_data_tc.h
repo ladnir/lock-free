@@ -40,7 +40,7 @@ template<typename T> int inline Guarded_data_tc<T>::tryPublish(T entry){
 		guard.store(1, memory_order_release);
 		return 1;
 	}
-	printf("try pub: %u", guard.load());
+	//printf("try pub: %u", guard.load());
 	return 0;
 }
 
