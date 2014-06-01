@@ -54,8 +54,8 @@ template <typename T> int queue_lf_tc_mpsc<T>::push(T entry){
 	unsigned int lcl_tail, lcl_head;
 
 	do{
-		lcl_tail = this->tail.load(memory_order_relaxed);
-		lcl_head = this->head.load(memory_order_relaxed); 
+		lcl_tail = tail.load(memory_order_relaxed);
+		lcl_head = head.load(memory_order_relaxed); 
 		if (lcl_tail + cap <= lcl_head) // head - cap == tail
 			return 0;
 	// try and reserve head for our selves

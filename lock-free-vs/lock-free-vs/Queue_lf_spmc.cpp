@@ -45,8 +45,8 @@ template<typename T> int Queue_lf_spmc<T>::pop(T& dest)
 	unsigned int lcl_tail, lcl_head;
 
 	do{
-		lcl_tail = this->tail.load(memory_order_relaxed);
-		lcl_head = this->head.load(memory_order_relaxed);
+		lcl_tail = tail.load(memory_order_relaxed);
+		lcl_head = head.load(memory_order_relaxed);
 		if (lcl_tail == lcl_head){ // head - cap == tail
 			//printf("empty\n");
 			return 0;

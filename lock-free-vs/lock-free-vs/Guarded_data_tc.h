@@ -15,10 +15,10 @@ using namespace std;
 
 template <class T>
 class Guarded_data_tc{
-private:
-	T data;
-	atomic< int> guard{ 0 };
 public:
+	T data;
+	atomic<unsigned int> guard{ 0 };
+
 
 	Guarded_data_tc() {
 		guard.store(0, memory_order_release);

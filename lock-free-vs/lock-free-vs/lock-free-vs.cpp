@@ -2,34 +2,47 @@
 
 #include "stdafx.h"
 #include <windows.h>
-//#include "Queue_lf_s_mpsc.h"
-//#include "Queue_lf_ts_mpsc.h"
-#include "queue_lf_tc_mpsc.h"
-#include "Queue_lf_spmc.cpp"
-static const unsigned COUNT = 1000000; // 65537
+//#include "queue_lf_tc_mpsc.h"
+//#include "Queue_lf_spmc.cpp"
+#include "Deque_lf_tmc.cpp"
+static const unsigned COUNT = 10; // 65537
 static const int NUM_PROD = 1;
-static const int NUM_CONS = 4;
-//typedef struct lf_queue_spsc_t QUEUE_TYPE;
-//typedef struct queue_lf_s_mpsc_t QUEUE_TYPE;
-//typedef struct queue_lf_ts_mpsc_t<int> QUEUE_TYPE;
+static const int NUM_CONS = 1;
 //typedef queue_lf_tc_mpsc<int> QUEUE_TYPE;
-typedef Queue_lf_spmc<int> QUEUE_TYPE;
+//typedef Queue_lf_spmc<int> QUEUE_TYPE;
+typedef Deque_lf_tmc<int> QUEUE_TYPE;
 
-
-void func_prod(QUEUE_TYPE& queue, unsigned long long& returnValue){
-	int j = 0;
-	
-	for (int i = 0; i < COUNT; i++) {
-
-		//while (!queue.push(&queue,i)){
-		while (!queue.push(i)){
-			//if(j++ % 10000  == 0)printf("stuck %d, %d\n",j,i);
+void func_prod(QUEUE_TYPE& queue, unsigned long long& returnValue, unsigned long long& popRet){
+	int k,j = 0;
+	int notPopped = 0;
+	for (int i = 0; i < COUNT * 3; i++) {
+		j = 0;
+		k = i % 3;
+		//while (!queue.push(i)){
+		if (k == 0 || k == 1){
+			while (!queue.pushHead(i)){
+				if (j++ % 1000 == 0)printf("stuck head push %d, %d\n", j, i);
+			}
+			returnValue += i;
+		}else{
+			if(!queue.popHead(k)){
+				notPopped++;
+			}
+			else{
+				popRet += k;
+			}
 		}
 	//	if (i%10000 == 0)
 			//printf("P%d\n",i);
-		returnValue += i;
 	}
+	for (int i = 0; i < notPopped; i++){
 
+		while (!queue.popHead(k)){
+			if (j++ % 1 == 0)printf("stuck head pop %d, %d\n", j, i);
+		}
+		popRet += k;
+	}
+	printf("prodpop %llu\n", popRet);
 	printf("prod %llu\n", returnValue);
 }
 
@@ -40,8 +53,8 @@ void func_cons(QUEUE_TYPE& queue, unsigned long long& returnValue){
 	returnValue = 0;
 	
 	for (int i = 0; i < loopCount; i++) {
-		//while (!queue.pop(&queue, ptr)){
-		while (!queue.pop( ptr)){
+		//while (!queue.pop(ptr)){
+		while (!queue.popTail(ptr)){
 			//printf("pop failed, %d, %d\n",i,COUNT);
 		}
 		//if (!(i % 10000))printf("cons %d\n",i);
@@ -68,7 +81,7 @@ int main(int argc, char* argv[]){
 	unsigned long long prodRet[NUM_PROD];
 	thread consumer[NUM_CONS];
 	unsigned long long consRet[NUM_CONS];
-
+	unsigned long long prodPopped = 0;
 	// INIT
 	GetSystemTime(&start);
 
@@ -85,7 +98,8 @@ int main(int argc, char* argv[]){
 		prodRet[i] = 0;
 		prods[i] = thread(func_prod, 
 						  std::ref(queue),
-						  std::ref(prodRet[i]));
+						  std::ref(prodRet[i]),
+						  std::ref(prodPopped));
 	}
 
 	// JOIN THREADS
@@ -107,15 +121,16 @@ int main(int argc, char* argv[]){
 		+ (end.wSecond * 1.0 - start.wSecond)
 		+ ( (end.wMilliseconds * 1.0- start.wMilliseconds)/1000.0);
 
-	double rate = COUNT*NUM_PROD / (t );
+	double rate = 2* COUNT*NUM_PROD / (t );
 
 	printf("time:%f s\n#c: %d\n#p: %d\nCOUNT: %d\n", t, NUM_CONS,NUM_PROD,COUNT);
 	printf("%f push/pops per second\n", rate);
 
 	// CHECK FOR ERRORS
-	if (prod_sum != cons_sum){
+	if (prod_sum != cons_sum + prodPopped){
 		printf("FAIL!!!!!!!!!!!!!\n");
 		printf("prod_sum:%llu \n", prod_sum);
+		printf("prod_pop:%llu \n", prodPopped);
 		printf("cons_sum:%llu \n", cons_sum);
 	}
 	while (1);

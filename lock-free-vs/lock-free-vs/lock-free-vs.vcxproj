@@ -81,6 +81,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Deque_lf_tmc.h" />
     <ClInclude Include="Guarded_data_tc.h" />
     <ClInclude Include="Queue_lf_spmc.h" />
     <ClInclude Include="Queue_lf_spsc.h" />
@@ -95,6 +96,7 @@
     <ResourceCompile Include="app.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Deque_lf_tmc.cpp" />
     <ClCompile Include="lock-free-vs.cpp" />
     <ClCompile Include="Queue_lf_spmc.cpp" />
     <ClCompile Include="stdafx.cpp">
